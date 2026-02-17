@@ -15,16 +15,6 @@ def get_device_id(request):
     data = request.get_json(silent=True) or {}
     return data.get('device_id', '')
 
-def get_file_path(request):
-    """Extract file path from request"""
-    data = request.get_json(silent=True) or {}
-    return data.get('file_path', '')
-
-def get_file_hash(request):
-    """Extract file hash from request"""
-    data = request.get_json(silent=True) or {}
-    return data.get('file_hash', '')
-
 # Initialize database
 if not os.path.exists(DB_FILE):
     with open(DB_FILE, "w") as f:
@@ -48,13 +38,11 @@ def home():
 
 @app.route('/check/<key>', methods=['POST'])
 def check_key(key):
-    """Check key status with device, path and file binding"""
+    """Check key status with device binding only"""
     key = key.upper()
     data = request.get_json(silent=True) or {}
     
     device_id = data.get('device_id')
-    file_path = data.get('file_path')
-    file_hash = data.get('file_hash')
     
     with open(DB_FILE, 'r') as f:
         db = json.load(f)
@@ -62,42 +50,27 @@ def check_key(key):
     if key in db['activations']:
         key_data = db['activations'][key].copy()
         
-        # Check registered device, path and file
+        # Check registered device
         registered_device = key_data.get('registered_device')
-        registered_path = key_data.get('registered_path')
-        registered_hash = key_data.get('registered_hash')
         
         # If key is active but no registration data (first use)
         if key_data['status'] == 'active' and not registered_device and device_id:
-            # Register all data for first time
+            # Register device only
             db['activations'][key]['registered_device'] = device_id
-            db['activations'][key]['registered_path'] = file_path
-            db['activations'][key]['registered_hash'] = file_hash
             db['activations'][key]['first_use'] = datetime.now().isoformat()
             with open(DB_FILE, 'w') as f:
                 json.dump(db, f, indent=2)
             key_data['registered_device'] = device_id
-            key_data['registered_path'] = file_path
-            key_data['registered_hash'] = file_hash
         
-        # Verify everything matches
-        if registered_device:
-            errors = []
-            if registered_device != device_id:
-                errors.append("Different device")
-            if registered_path != file_path:
-                errors.append("Different path")
-            if registered_hash != file_hash:
-                errors.append("Different file")
-            
-            if errors:
-                return jsonify({
-                    'found': True,
-                    'status': 'blocked',
-                    'message': f'Access denied: {", ".join(errors)}',
-                    'expiry': key_data.get('expiry', ''),
-                    'activated': key_data.get('activated', '')
-                }), 403
+        # Verify device matches only
+        if registered_device and registered_device != device_id:
+            return jsonify({
+                'found': True,
+                'status': 'blocked',
+                'message': 'Access denied: Different device',
+                'expiry': key_data.get('expiry', ''),
+                'activated': key_data.get('activated', '')
+            }), 403
         
         # Check if temporary suspension ended
         if key_data['status'] == 'suspended' and 'resume' in key_data:
@@ -143,8 +116,6 @@ def activate_key():
         'expiry': expiry,
         'months': months,
         'registered_device': None,
-        'registered_path': None,
-        'registered_hash': None,
         'first_use': None
     }
     
@@ -152,7 +123,7 @@ def activate_key():
     total = len(db['activations'])
     active = sum(1 for k in db['activations'].values() if k['status'] == 'active')
     suspended = sum(1 for k in db['activations'].values() if k['status'] == 'suspended')
-    inactive = total - active - suspended
+    inactive = total - active - suspended;
     
     db['stats'] = {
         'total_keys': total,
@@ -168,7 +139,7 @@ def activate_key():
 
 @app.route('/deactivate', methods=['POST'])
 def deactivate_key():
-    """Deactivate a key (permanent stop)"""
+    """Deactivate a key"""
     data = request.json
     key = data.get('key', '').upper()
     
