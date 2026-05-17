@@ -3,63 +3,25 @@ from telebot import types
 import requests
 import json
 from datetime import datetime
-import time
-import logging
-import os
 
-# إعداد التسجيل (logging)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# قراءة المتغيرات من البيئة (Environment Variables)
-BOT_TOKEN = os.environ.get('BOT_TOKEN', "8023858119:AAHcuoFVKwKgArs3cc6dnaEGY7XpN5Q6Vog")
-DEVELOPER_ID = os.environ.get('DEVELOPER_ID', "5981205477")
-SERVER_URL = os.environ.get('SERVER_URL', "https://server5-3.onrender.com")
+BOT_TOKEN = "8023858119:AAHcuoFVKwKgArs3cc6dnaEGY7XpN5Q6Vog"
+DEVELOPER_ID = "5981205477"
+SERVER_URL = "https://server5-9m6w.onrender.com"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
-def server_request(method, endpoint, data=None, max_retries=3):
-    """دالة محسنة مع إعادة المحاولة ومعالجة الأخطاء"""
-    for attempt in range(max_retries):
-        try:
-            url = f"{SERVER_URL}/{endpoint}"
-            logger.info(f"محاولة {attempt + 1}/{max_retries}: {method} {url}")
-            
-            if method == "GET":
-                response = requests.get(url, timeout=120)  # زيادة المهلة إلى 120 ثانية
-            else:
-                response = requests.post(url, json=data, timeout=120)
-            
-            if response.status_code == 200:
-                return response.json()
-            elif attempt < max_retries - 1:
-                logger.warning(f"إعادة محاولة {attempt + 1}/{max_retries} بعد 5 ثواني...")
-                time.sleep(5)
-                continue
-            else:
-                logger.error(f"فشل بعد {max_retries} محاولات. Status code: {response.status_code}")
-                return {"error": f"http_error_{response.status_code}"}
-                
-        except requests.exceptions.Timeout:
-            logger.error(f"⏰ مهلة الاتصال انتهت (محاولة {attempt + 1}/{max_retries})")
-            if attempt < max_retries - 1:
-                time.sleep(5)
-                continue
-            return {"error": "timeout"}
-            
-        except requests.exceptions.ConnectionError:
-            logger.error(f"🔌 خطأ في الاتصال (محاولة {attempt + 1}/{max_retries})")
-            if attempt < max_retries - 1:
-                time.sleep(5)
-                continue
-            return {"error": "connection"}
-            
-        except Exception as e:
-            logger.error(f"❌ خطأ غير متوقع: {str(e)}")
-            return {"error": str(e)}
-    
-    return {"error": "max_retries_exceeded"}
+def server_request(method, endpoint, data=None):
+    """دالة موحدة للتواصل مع السيرفر"""
+    try:
+        url = f"{SERVER_URL}/{endpoint}"
+        if method == "GET":
+            response = requests.get(url, timeout=60)
+        else:
+            response = requests.post(url, json=data, timeout=60)
+        return response.json() if response.status_code == 200 else None
+    except Exception as e:
+        return {"error": str(e)}
 
 @bot.message_handler(commands=['start', 'بدء'])
 def send_welcome(message):
@@ -294,18 +256,7 @@ def process_resume(message):
         msg = "❌ السيرفر يستجيب ببطء، انتظر 30 ثانية ثم أعد المحاولة"
     bot.reply_to(message, msg)
 
-if __name__ == "__main__":
-    print("✅ بوت أشرف - جميع الأوامر مفعلة")
-    print(f"👨‍💻 المطور: @AShrf_771117678")
-    print(f"🌐 السيرفر: {SERVER_URL}")
-    print("🔄 بدء تشغيل البوت مع نظام إعادة الاتصال التلقائي...")
-    
-    # نظام إعادة الاتصال التلقائي
-    while True:
-        try:
-            bot.polling(none_stop=True, interval=0, timeout=30)
-        except Exception as e:
-            logger.error(f"❌ خطأ في الاتصال: {e}")
-            logger.info("🔄 إعادة الاتصال بعد 10 ثواني...")
-            time.sleep(10)
-            continue
+print("✅ بوت أشرف - جميع الأوامر مفعلة")
+print(f"👨‍💻 المطور: @AShrf_771117678")
+print(f"🌐 السيرفر: {SERVER_URL}")
+bot.polling()
