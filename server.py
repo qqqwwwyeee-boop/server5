@@ -44,7 +44,7 @@ def home():
         "status": "online",
         "message": "Ashraf Activation Server",
         "developer": "@AShrf_771117678",
-        "server_url": "https://server5-9m6w.onrender.com"
+        "server_url": "https://server5-777.onrender.com"
     })
 
 @app.route('/check/<key>', methods=['POST'])
