@@ -6,7 +6,7 @@ from datetime import datetime
 
 BOT_TOKEN = "8023858119:AAHcuoFVKwKgArs3cc6dnaEGY7XpN5Q6Vog"
 DEVELOPER_ID = "5981205477"
-SERVER_URL = "https://server5-9m6w.onrender.com"
+SERVER_URL = "https://server5-777.onrender.com"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
